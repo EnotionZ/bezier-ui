@@ -161,13 +161,16 @@ LineSegment.prototype.cubicCompute = function(t, key) {
 };
 
 LineSegment.prototype.computeCoord = function(arr) {
-	var steps = 100;
+	var steps = 1000;
 	var inc = 1/steps;
 	if(this.isFirst()) {
 		arr.push({x: this.pt.state.x, y: this.pt.state.y});
 	} else {
 		for(var t=0; t < 1; t+=inc) {
-			arr.push({x:this.cubicCompute(t, 'x'), y:this.cubicCompute(t, 'y')});
+			arr.push({
+				x: this.cubicCompute(t, 'x'),
+				y: this.cubicCompute(t, 'y')
+			});
 		}
 	}
 	if(this.next) this.next.computeCoord(arr);
@@ -182,6 +185,7 @@ var BezierPath = function(curve) {
 
 	this.state = {
 		down: false,
+		num_items: 10,
 		hoverPoint: null
 	};
 
@@ -280,11 +284,17 @@ BezierPath.prototype.computeCoord = function() {
 	var pairs = [];
 	this.segment.first().computeCoord(pairs);
 
+	var spacing = width/(this.state.num_items-1);
+	var next = padding + spacing;
+
 	pairs.forEach(function(set) {
-		ctx.beginPath();
-		ctx.arc(set.x, set.y, 1, 0, Math.PI*2, true);
-		ctx.fillStyle = 'red';
-		ctx.fill();
+		if(set.x > next) {
+			next += spacing;
+			ctx.beginPath();
+			ctx.moveTo(set.x, set.y);
+			ctx.lineTo(set.x, height+padding);
+			ctx.stroke();
+		}
 	});
 };
 
