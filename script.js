@@ -2,8 +2,9 @@ var $ = document.querySelector.bind(document);
 var canvas = $('canvas');
 var ctx = canvas.getContext('2d');
 
-var width = 400;
-var height = 400;
+var padding = 40;
+var width = 600;
+var height = 500;
 
 
 var pointList = [];
@@ -13,8 +14,8 @@ var Point = function(pt, type) {
 	this.type = type || 'normal';
 
 	this.state = {
-		x: pt[0],
-		y: pt[1],
+		x: pt[0] + padding,
+		y: pt[1] + padding,
 		radius: 5,
 		state: 'base'
 	};
@@ -63,7 +64,7 @@ Point.prototype.draw = function() {
 };
 
 Point.prototype.toJSON = function() {
-	return [this.state.x, this.state.y];
+	return [this.state.x-padding, this.state.y-padding];
 };
 
 /* Line Segment */
@@ -154,6 +155,10 @@ LineSegment.prototype.toJSON = function() {
 
 /* Bezier */
 var BezierPath = function(curve) {
+
+	canvas.width = width + 2*padding;
+	canvas.height = height + 2*padding;
+
 	this.state = {
 		down: false,
 		hoverPoint: null
@@ -162,7 +167,7 @@ var BezierPath = function(curve) {
 	this.segment = null;
 	this.setPath(curve);
 
-	canvas.addEventListener('mousemove', this.mousemove.bind(this));
+	document.body.addEventListener('mousemove', this.mousemove.bind(this));
 	canvas.addEventListener('mousedown', this.mousedown.bind(this));
 	canvas.addEventListener('mouseup', this.mouseup.bind(this));
 };
@@ -182,9 +187,11 @@ BezierPath.prototype.mouseup = function(e) {
 BezierPath.prototype.mousemove = function(e) {
 	var x = e.offsetX, y = e.offsetY;
 	if(this.state.down) {
+		x = Math.min(Math.max(padding, x), width+padding);
+		y = Math.min(Math.max(padding, y), height+padding);
 		this.state.hoverPoint.setPosition(x, y);
 		this.draw();
-	} else {
+	} else if(e.target === canvas) {
 		this.checkHover(x, y);
 	}
 };
@@ -224,8 +231,14 @@ BezierPath.prototype.setPath = function(curve) {
 
 BezierPath.prototype.draw = function() {
 	canvas.width = canvas.width;
+
+	ctx.rect(padding, padding, width, height);
+	ctx.strokeStyle = '#ccc';
+	ctx.stroke();
+
 	ctx.beginPath();
 	this.segment.first().draw();
+	ctx.strokeStyle = '#111';
 	ctx.stroke();
 	this.segment.first().drawCtrl();
 };
