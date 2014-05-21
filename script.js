@@ -152,6 +152,27 @@ LineSegment.prototype.toJSON = function() {
 	return out;
 };
 
+LineSegment.prototype.cubicCompute = function(t, key) {
+	var p0 = this.prev.pt.state[key];
+	var p1 = this.cp1.state[key];
+	var p2 = this.cp2.state[key];
+	var p3 = this.pt.state[key];
+	return Math.pow(1-t, 3)*p0 + 3*Math.pow(1-t, 2)*t*p1 + 3*(1-t)*Math.pow(t,2)*p2 + Math.pow(t,3)*p3;
+};
+
+LineSegment.prototype.computeCoord = function(arr) {
+	var steps = 100;
+	var inc = 1/steps;
+	if(this.isFirst()) {
+		arr.push({x: this.pt.state.x, y: this.pt.state.y});
+	} else {
+		for(var t=0; t < 1; t+=inc) {
+			arr.push({x:this.cubicCompute(t, 'x'), y:this.cubicCompute(t, 'y')});
+		}
+	}
+	if(this.next) this.next.computeCoord(arr);
+};
+
 
 /* Bezier */
 var BezierPath = function(curve) {
@@ -168,8 +189,8 @@ var BezierPath = function(curve) {
 	this.setPath(curve);
 
 	document.body.addEventListener('mousemove', this.mousemove.bind(this));
+	document.body.addEventListener('mouseup', this.mouseup.bind(this));
 	canvas.addEventListener('mousedown', this.mousedown.bind(this));
-	canvas.addEventListener('mouseup', this.mouseup.bind(this));
 };
 
 BezierPath.prototype.mousedown = function(e) {
@@ -241,6 +262,8 @@ BezierPath.prototype.draw = function() {
 	ctx.strokeStyle = '#111';
 	ctx.stroke();
 	this.segment.first().drawCtrl();
+
+	this.computeCoord();
 };
 
 BezierPath.prototype.toJSON = function(stringify) {
@@ -251,6 +274,18 @@ BezierPath.prototype.toJSON = function(stringify) {
 	} while (segment = segment.next);
 	if(stringify) out = JSON.stringify(out);
 	return out;
+};
+
+BezierPath.prototype.computeCoord = function() {
+	var pairs = [];
+	this.segment.first().computeCoord(pairs);
+
+	pairs.forEach(function(set) {
+		ctx.beginPath();
+		ctx.arc(set.x, set.y, 1, 0, Math.PI*2, true);
+		ctx.fillStyle = 'red';
+		ctx.fill();
+	});
 };
 
 
