@@ -31,11 +31,18 @@ var Point = function(pt, type) {
 	};
 };
 
-Point.prototype.setPosition = function(x, y) {
+Point.prototype.setOffset = function(dx, dy) {
+	this.state.x += dx;
+	this.state.y += dy;
+};
+
+Point.prototype.setPosition = function(x, y, silent) {
 	var dx = x - this.state.x;
 	var dy = y - this.state.y;
 	this.state.x = x;
 	this.state.y = y;
+
+	if(!silent && this.onPositionChange) this.onPositionChange(dx, dy);
 };
 
 Point.prototype.setState = function(state) {
@@ -55,31 +62,50 @@ Point.prototype.draw = function() {
 	ctx.fill();
 };
 
+Point.prototype.toJSON = function() {
+	return [this.state.x, this.state.y];
+};
+
 /* Line Segment */
 var LineSegment = function(opts) {
+
 	this.pt = new Point(opts.pt);
 	pointList.push(this.pt);
+
+	// binding changes with point position
+	this.pt.onPositionChange = function(dx, dy) {
+		if(!this.isFirst()) this.cp2.setOffset(dx, dy);
+		if(this.next) this.next.cp1.setOffset(dx, dy);
+	}.bind(this);
 
 	if(opts.cp1) {
 		this.cp1 = new Point(opts.cp1, 'control');
 		this.cp2 = new Point(opts.cp2, 'control');
 		pointList.push(this.cp1);
 		pointList.push(this.cp2);
+
+		this.cp1.onPositionChange = function(dx, dy) {
+			if(!this.prev.isFirst()) this.prev.cp2.setOffset(-dx, -dy);
+		}.bind(this);
+
+		this.cp2.onPositionChange = function(dx, dy) {
+			if(this.next) this.next.cp1.setOffset(-dx, -dy);
+		}.bind(this);
 	}
 
-	this.next;
-	this.prev;
+	this.next = null;
+	this.prev = null;
 };
 
 LineSegment.prototype.first = function() {
 	var segment = this;
-	while (segment.prev) segment = segment.prev
+	while (segment.prev) segment = segment.prev;
 	return segment;
 };
 
 LineSegment.prototype.last = function() {
 	var segment = this;
-	while (segment.next) segment = segment.next
+	while (segment.next) segment = segment.next;
 	return segment;
 };
 
@@ -116,6 +142,15 @@ LineSegment.prototype.drawCtrl = function() {
 	if(this.next) this.next.drawCtrl();
 };
 
+LineSegment.prototype.toJSON = function() {
+	var out = { pt: this.pt.toJSON() };
+	if(!this.isFirst()) {
+		out.cp1 = this.cp1.toJSON();
+		out.cp2 = this.cp2.toJSON();
+	}
+	return out;
+};
+
 
 /* Bezier */
 var BezierPath = function(curve) {
@@ -124,8 +159,9 @@ var BezierPath = function(curve) {
 		hoverPoint: null
 	};
 
-	this.segment;
+	this.segment = null;
 	this.setPath(curve);
+
 	canvas.addEventListener('mousemove', this.mousemove.bind(this));
 	canvas.addEventListener('mousedown', this.mousedown.bind(this));
 	canvas.addEventListener('mouseup', this.mouseup.bind(this));
@@ -185,6 +221,15 @@ BezierPath.prototype.draw = function() {
 	this.segment.first().draw();
 	ctx.stroke();
 	this.segment.first().drawCtrl();
+};
+
+BezierPath.prototype.toJSON = function() {
+	var out = [];
+	var segment = this.segment.first();
+	do {
+		out.push(segment.toJSON());
+	} while (segment = segment.next);
+	return out;
 };
 
 
