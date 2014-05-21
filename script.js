@@ -205,6 +205,11 @@ BezierPath.prototype.checkHover = function(x, y) {
 };
 
 BezierPath.prototype.setPath = function(curve) {
+	pointList = [];
+	this.segment = null;
+
+	if(typeof curve === 'string') curve = JSON.parse(curve);
+
 	curve.forEach(function(point) {
 		var segment = new LineSegment(point);
 		if(this.segment) {
@@ -213,6 +218,8 @@ BezierPath.prototype.setPath = function(curve) {
 		}
 		this.segment = segment;
 	}.bind(this));
+
+	this.draw();
 };
 
 BezierPath.prototype.draw = function() {
@@ -223,12 +230,13 @@ BezierPath.prototype.draw = function() {
 	this.segment.first().drawCtrl();
 };
 
-BezierPath.prototype.toJSON = function() {
+BezierPath.prototype.toJSON = function(stringify) {
 	var out = [];
 	var segment = this.segment.first();
 	do {
 		out.push(segment.toJSON());
 	} while (segment = segment.next);
+	if(stringify) out = JSON.stringify(out);
 	return out;
 };
 
@@ -250,4 +258,3 @@ var defaultCurve = [
 ];
 
 var b = new BezierPath(defaultCurve);
-b.draw();
