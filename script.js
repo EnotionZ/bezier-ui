@@ -178,7 +178,9 @@ LineSegment.prototype.computeCoord = function(arr) {
 
 
 /* Bezier */
-var BezierPath = function(curve) {
+var BezierPath = function(opts) {
+
+	if(typeof opts === 'string') opts = JSON.parse(opts);
 
 	canvas.width = width + 2*padding;
 	canvas.height = height + 2*padding;
@@ -189,8 +191,8 @@ var BezierPath = function(curve) {
 		hoverPoint: null
 	};
 
-	this.segment = null;
-	this.setPath(curve);
+	this.segment1 = null;
+	this.resetPath(opts);
 
 	document.body.addEventListener('mousemove', this.mousemove.bind(this));
 	document.body.addEventListener('mouseup', this.mouseup.bind(this));
@@ -236,22 +238,24 @@ BezierPath.prototype.checkHover = function(x, y) {
 	this.draw();
 };
 
-BezierPath.prototype.setPath = function(curve) {
+BezierPath.prototype.resetPath = function(opts) {
+	if(typeof opts === 'string') opts = JSON.parse(opts);
 	pointList = [];
-	this.segment = null;
+	this.createSegments('segment1', opts.curve1);
+	this.createSegments('segment2', opts.curve2);
+};
 
-	if(typeof curve === 'string') curve = JSON.parse(curve);
+BezierPath.prototype.createSegments = function(key, curve) {
+	this[key] = null;
 
 	curve.forEach(function(point) {
 		var segment = new LineSegment(point);
-		if(this.segment) {
-			this.segment.next = segment;
-			segment.prev = this.segment;
+		if(this[key]) {
+			this[key].next = segment;
+			segment.prev = this[key];
 		}
-		this.segment = segment;
+		this[key] = segment;
 	}.bind(this));
-
-	this.draw();
 };
 
 BezierPath.prototype.draw = function() {
@@ -262,27 +266,39 @@ BezierPath.prototype.draw = function() {
 	ctx.stroke();
 
 	ctx.beginPath();
-	this.segment.first().draw();
+	this.segment1.first().draw();
+	this.segment2.first().draw();
 	ctx.strokeStyle = '#111';
 	ctx.stroke();
-	this.segment.first().drawCtrl();
+
+	this.segment1.first().drawCtrl();
+	this.segment2.first().drawCtrl();
 
 	this.computeCoord();
 };
 
-BezierPath.prototype.toJSON = function(stringify) {
+BezierPath.prototype.getSegmentJSON = function(segment) {
 	var out = [];
-	var segment = this.segment.first();
+	segment = segment.first();
 	do {
 		out.push(segment.toJSON());
 	} while (segment = segment.next);
+	return out;
+};
+
+BezierPath.prototype.toJSON = function(stringify) {
+	var out = {
+		curve1: this.getSegmentJSON(this.segment1),
+		curve2: this.getSegmentJSON(this.segment2)
+	};
 	if(stringify) out = JSON.stringify(out);
 	return out;
 };
 
-BezierPath.prototype.computeCoord = function() {
+BezierPath.prototype.getCoordSet = function(segment) {
 	var pairs = [];
-	this.segment.first().computeCoord(pairs);
+	var out = [];
+	segment.first().computeCoord(pairs);
 
 	var spacing = width/(this.state.num_items-1);
 	var next = padding + spacing;
@@ -290,29 +306,57 @@ BezierPath.prototype.computeCoord = function() {
 	pairs.forEach(function(set) {
 		if(set.x > next) {
 			next += spacing;
-			ctx.beginPath();
-			ctx.moveTo(set.x, set.y);
-			ctx.lineTo(set.x, height+padding);
-			ctx.stroke();
+			out.push({x: next - spacing, y: set.y});
 		}
 	});
+
+	return out;
+};
+
+BezierPath.prototype.computeCoord = function() {
+	var coordSet1 = this.getCoordSet(this.segment1);
+	var coordSet2 = this.getCoordSet(this.segment2);
+
+	for(var i=0; i< coordSet1.length; i++) {
+		ctx.beginPath();
+		ctx.moveTo(coordSet1[i].x, coordSet1[i].y);
+		ctx.lineTo(coordSet2[i].x, coordSet2[i].y);
+		ctx.strokeStyle = '#ccc';
+		ctx.stroke();
+	}
 };
 
 
 
 
-var defaultCurve = [
-	{ pt: [0, 0] },
-	{
-		cp1: [100,0],
-		cp2: [100,250],
-		pt: [300,250]
-	},
-	{
-		cp1: [500,250],
-		cp2: [500,500],
-		pt: [600,500]
-	}
-];
+var defaultSettings = {
+	curve1: [
+		{ pt: [0, 0] },
+		{
+			cp1: [100,0],
+			cp2: [100,250],
+			pt: [300,250]
+		},
+		{
+			cp1: [500,250],
+			cp2: [500,500],
+			pt: [600,450]
+		}
+	],
+	curve2: [
+		{ pt: [0, 500] },
+		{
+			cp1: [100,500],
+			cp2: [100,350],
+			pt: [300,350]
+		},
+		{
+			cp1: [500,350],
+			cp2: [500,500],
+			pt: [600,500]
+		}
+	]
+};
 
-var b = new BezierPath(defaultCurve);
+var b = new BezierPath(defaultSettings);
+b.draw();
