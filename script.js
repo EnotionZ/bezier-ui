@@ -187,7 +187,7 @@ var BezierPath = function(opts) {
 
 	this.state = {
 		down: false,
-		num_items: 10,
+		num_items: 8,
 		hoverPoint: null
 	};
 
@@ -302,7 +302,7 @@ BezierPath.prototype.getCoordSet = function(segment) {
 	segment.first().computeCoord(pairs);
 
 	var spacing = width/(this.state.num_items-1);
-	var next = padding + spacing;
+	var next = padding;
 
 	pairs.forEach(function(set) {
 		if(set.x > next) {
@@ -310,6 +310,8 @@ BezierPath.prototype.getCoordSet = function(segment) {
 			out.push({x: next - spacing, y: set.y});
 		}
 	});
+	var last = segment.last();
+	out.push({x: last.pt.state.x, y: last.pt.state.y});
 
 	return out;
 };
@@ -318,13 +320,24 @@ BezierPath.prototype.computeCoord = function() {
 	var coordSet1 = this.getCoordSet(this.segment1);
 	var coordSet2 = this.getCoordSet(this.segment2);
 
+	var out = [];
+
 	for(var i=0; i< coordSet1.length; i++) {
 		ctx.beginPath();
 		ctx.moveTo(coordSet1[i].x, coordSet1[i].y);
 		ctx.lineTo(coordSet2[i].x, coordSet2[i].y);
-		ctx.strokeStyle = '#ccc';
+		ctx.strokeStyle = 'red';
 		ctx.stroke();
+
+		out.push({
+			scale: (coordSet2[i].y - coordSet1[i].y)/height,
+			y: (Math.min(coordSet1[i].y, coordSet2[i].y) - padding)/height,
+			x: (coordSet1[i].x - padding)/width
+		});
 	}
+	this.coords = out;
+	if(this.onCoordChange) this.onCoordChange(out);
+	return out;
 };
 
 
