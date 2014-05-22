@@ -111,6 +111,7 @@ LineSegment.prototype.last = function() {
 };
 
 LineSegment.prototype.isFirst = function() { return !this.prev; };
+LineSegment.prototype.isLast = function() { return !this.next; };
 
 LineSegment.prototype.draw = function() {
 	if(this.isFirst()) {
@@ -216,6 +217,11 @@ BezierPath.prototype.mousemove = function(e) {
 	if(this.state.down) {
 		x = Math.min(Math.max(padding, x), width+padding);
 		y = Math.min(Math.max(padding, y), height+padding);
+
+		var hoverPoint = this.state.hoverPoint;
+		if(hoverPoint.isFirst) x = padding;
+		if(hoverPoint.isLast) x = width + padding;
+
 		this.state.hoverPoint.setPosition(x, y);
 		this.draw();
 	} else if(e.target === canvas) {
@@ -257,6 +263,10 @@ BezierPath.prototype.createSegments = function(key, curve) {
 		}
 		this[key] = segment;
 	}.bind(this));
+
+	// first and last points to enable fixed x
+	this[key].first().pt.isFirst = true;
+	this[key].last().pt.isLast = true;
 };
 
 BezierPath.prototype.draw = function() {
@@ -323,6 +333,8 @@ BezierPath.prototype.computeCoord = function() {
 	var out = [];
 
 	for(var i=0; i< coordSet1.length; i++) {
+		if(!coordSet2[i]) continue;
+
 		ctx.beginPath();
 		ctx.moveTo(coordSet1[i].x, coordSet1[i].y);
 		ctx.lineTo(coordSet2[i].x, coordSet2[i].y);
