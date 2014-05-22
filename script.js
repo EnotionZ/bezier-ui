@@ -243,6 +243,7 @@ BezierPath.prototype.resetPath = function(opts) {
 	pointList = [];
 	this.createSegments('segment1', opts.curve1);
 	this.createSegments('segment2', opts.curve2);
+	this.draw();
 };
 
 BezierPath.prototype.createSegments = function(key, curve) {
@@ -359,4 +360,3 @@ var defaultSettings = {
 };
 
 var b = new BezierPath(defaultSettings);
-b.draw();
