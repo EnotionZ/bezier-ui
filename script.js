@@ -175,6 +175,7 @@ LineSegment.prototype.computeCoord = function(arr) {
 		}
 	}
 	if(this.next) this.next.computeCoord(arr);
+	else arr.push({ x: this.pt.state.x, y: this.pt.state.y });
 };
 
 
@@ -193,6 +194,8 @@ var BezierPath = function(opts) {
 	};
 
 	this.segment1 = null;
+	this.segment2 = null;
+	this.coords = [];
 	this.resetPath(opts);
 
 	document.body.addEventListener('mousemove', this.mousemove.bind(this));
@@ -306,50 +309,80 @@ BezierPath.prototype.toJSON = function(stringify) {
 	return out;
 };
 
-BezierPath.prototype.getCoordSet = function(segment) {
-	var pairs = [];
-	var out = [];
-	segment.first().computeCoord(pairs);
+BezierPath.prototype.storeCoords = function() {
+	this._coords1 = [];
+	this._coords2 = [];
+	this.segment1.first().computeCoord(this._coords1);
+	this.segment2.first().computeCoord(this._coords2);
+};
 
+BezierPath.prototype.getY = function(coords, x) {
+	for(var i = 0; i < coords.length; i++) {
+		if(coords[i].x >= x) return coords[i].y;
+	}
+};
+
+BezierPath.prototype.getYPair = function(x) {
+	var y = this.getY(this._coords1, x) - padding;
+	var y2 = this.getY(this._coords2, x) - padding;
+	return {
+		x: (x - padding)/width,
+		y: y/height,
+		y2: y2/height,
+		scale: (y2-y)/height,
+		diff: y2-y
+	};
+};
+
+BezierPath.prototype.smooth = function() {
+	var heightSum = this.coords.reduce(function(a, b) {
+		if(a.diff) a = a.diff;
+		return a + b.diff;
+	}) - this.coords[this.coords.length-1].diff;
+	var avgHeight = heightSum/(this.state.num_items);
 	var spacing = width/(this.state.num_items-1);
-	var next = padding;
-
-	pairs.forEach(function(set) {
-		if(set.x > next) {
-			next += spacing;
-			out.push({x: next - spacing, y: set.y});
-		}
-	});
-	var last = segment.last();
-	out.push({x: last.pt.state.x, y: last.pt.state.y});
-
-	return out;
+	var ratio = spacing/avgHeight;
+	var currx = padding;
+	for(var i=1; i < this.coords.length; i++) {
+		currx += this.coords[i-1].diff*ratio;
+		this.coords[i] = this.getYPair(currx);
+	}
 };
 
 BezierPath.prototype.computeCoord = function() {
-	var coordSet1 = this.getCoordSet(this.segment1);
-	var coordSet2 = this.getCoordSet(this.segment2);
+	this.storeCoords();
 
-	var out = [];
+	this.coords = [];
 
-	for(var i=0; i< coordSet1.length; i++) {
-		if(!coordSet2[i]) continue;
+	// generate initial set
+	var spacing = width/(this.state.num_items-1);
+	for(var i=0; i < this.state.num_items-1; i++) {
+		this.coords.push(this.getYPair(padding + spacing*i));
+	}
+
+	this.smooth();
+
+	// last item
+	this.coords.push(this.getYPair(width+padding));
+
+	this.drawCross();
+	if(this.onCoordChange) this.onCoordChange(this.coords);
+};
+
+BezierPath.prototype.drawCross = function() {
+	var c, x, y, y2;
+	for(var i=0; i< this.coords.length; i++) {
+		c = this.coords[i];
+		x = c.x*width + padding;
+		y = c.y*height + padding;
+		y2 = c.y2*height + padding;
 
 		ctx.beginPath();
-		ctx.moveTo(coordSet1[i].x, coordSet1[i].y);
-		ctx.lineTo(coordSet2[i].x, coordSet2[i].y);
+		ctx.moveTo(x, y);
+		ctx.lineTo(x, y2);
 		ctx.strokeStyle = 'red';
 		ctx.stroke();
-
-		out.push({
-			scale: (coordSet2[i].y - coordSet1[i].y)/height,
-			y: (Math.min(coordSet1[i].y, coordSet2[i].y) - padding)/height,
-			x: (coordSet1[i].x - padding)/width
-		});
 	}
-	this.coords = out;
-	if(this.onCoordChange) this.onCoordChange(out);
-	return out;
 };
 
 
