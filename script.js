@@ -334,11 +334,12 @@ BezierPath.prototype.getYPair = function(x) {
 	};
 };
 
-BezierPath.prototype.smooth = function() {
+BezierPath.prototype.fixCoordSpacing = function() {
+	var lastIndex = this.coords.length -1;
 	var heightSum = this.coords.reduce(function(a, b) {
 		if(a.diff) a = a.diff;
 		return a + b.diff;
-	}) - this.coords[this.coords.length-1].diff;
+	}) - this.coords[lastIndex].diff;
 	var avgHeight = heightSum/(this.state.num_items);
 	var spacing = width/(this.state.num_items-1);
 	var ratio = spacing/avgHeight;
@@ -346,6 +347,10 @@ BezierPath.prototype.smooth = function() {
 	for(var i=1; i < this.coords.length; i++) {
 		currx += this.coords[i-1].diff*ratio;
 		this.coords[i] = this.getYPair(currx);
+	}
+
+	if(this.coords[lastIndex].x > 1) {
+		this.coords[lastIndex] = this.getYPair(width+padding);
 	}
 };
 
@@ -360,10 +365,10 @@ BezierPath.prototype.computeCoord = function() {
 		this.coords.push(this.getYPair(padding + spacing*i));
 	}
 
-	this.smooth();
-
 	// last item
 	this.coords.push(this.getYPair(width+padding));
+
+	this.fixCoordSpacing();
 
 	this.drawCross();
 	if(this.onCoordChange) this.onCoordChange(this.coords);
