@@ -203,7 +203,10 @@ var BezierPath = function(opts) {
 	canvas.addEventListener('mousedown', this.mousedown.bind(this));
 };
 
-BezierPath.prototype.mousedown = function(e) {
+/**
+ * Set active state on the current hover point
+ */
+BezierPath.prototype.mousedown = function() {
 	if(this.state.hoverPoint) {
 		this.state.down = true;
 		this.state.hoverPoint.setState('active');
@@ -211,10 +214,17 @@ BezierPath.prototype.mousedown = function(e) {
 	}
 };
 
-BezierPath.prototype.mouseup = function(e) {
+/**
+ * Cancels the mousedown state
+ */
+BezierPath.prototype.mouseup = function() {
 	this.state.down = false;
 };
 
+/**
+ * Mousemove event handler
+ * @param {e} object event
+ */
 BezierPath.prototype.mousemove = function(e) {
 	var x = e.offsetX, y = e.offsetY;
 	if(this.state.down) {
@@ -232,6 +242,11 @@ BezierPath.prototype.mousemove = function(e) {
 	}
 };
 
+/**
+ * Sets the hoverPoint state
+ * @param {x} number coordinate
+ * @param {y} number coordinate
+ */
 BezierPath.prototype.checkHover = function(x, y) {
 	var hoverPoint;
 	for(var i=0; i < pointList.length; i++) {
@@ -247,6 +262,10 @@ BezierPath.prototype.checkHover = function(x, y) {
 	this.draw();
 };
 
+/**
+ * Resets the current two LineSegments
+ * @param {opts} object representing the top and bottom Line Segments
+ */
 BezierPath.prototype.resetPath = function(opts) {
 	if(typeof opts === 'string') opts = JSON.parse(opts);
 	pointList = [];
@@ -255,6 +274,11 @@ BezierPath.prototype.resetPath = function(opts) {
 	this.draw();
 };
 
+/**
+ * Creates a bezier LineSegment
+ * @param {key} string name to store into the current instance
+ * @param {curve} object representation of the LineSegment curve
+ */
 BezierPath.prototype.createSegments = function(key, curve) {
 	this[key] = null;
 
@@ -272,6 +296,9 @@ BezierPath.prototype.createSegments = function(key, curve) {
 	this[key].last().pt.isLast = true;
 };
 
+/**
+ * Draws bezier curve onto the canvas
+ */
 BezierPath.prototype.draw = function() {
 	canvas.width = canvas.width;
 
@@ -291,6 +318,11 @@ BezierPath.prototype.draw = function() {
 	this.computeCoord();
 };
 
+/**
+ * Gets JSON representation of a single bezier LineSegment
+ * @param {segment} LineSegment
+ * @return {object} JSON representation of LineSegment
+ */
 BezierPath.prototype.getSegmentJSON = function(segment) {
 	var out = [];
 	segment = segment.first();
@@ -300,6 +332,11 @@ BezierPath.prototype.getSegmentJSON = function(segment) {
 	return out;
 };
 
+/**
+ * Gets the JSON representation of the current curve
+ * @param {stringify} boolean string output
+ * @return {object} representing the two bezier Line Segments
+ */
 BezierPath.prototype.toJSON = function(stringify) {
 	var out = {
 		curve1: this.getSegmentJSON(this.segment1),
@@ -309,6 +346,9 @@ BezierPath.prototype.toJSON = function(stringify) {
 	return out;
 };
 
+/**
+ * Save {x, y} pairs from a bezier curve
+ */
 BezierPath.prototype.storeCoords = function() {
 	this._coords1 = [];
 	this._coords2 = [];
@@ -316,12 +356,21 @@ BezierPath.prototype.storeCoords = function() {
 	this.segment2.first().computeCoord(this._coords2);
 };
 
+/**
+ * Get closest y-coordinate given an x coordinate
+ * @param {coords} array of {x, y} coordinates of a bezier curve
+ * @param {x} number
+ */
 BezierPath.prototype.getY = function(coords, x) {
 	for(var i = 0; i < coords.length; i++) {
 		if(coords[i].x >= x) return coords[i].y;
 	}
 };
 
+/**
+ * Get information about a single coordinate
+ * @param {x} number
+ */
 BezierPath.prototype.getYPair = function(x) {
 	var y = this.getY(this._coords1, x) - padding;
 	var y2 = this.getY(this._coords2, x) - padding;
@@ -334,6 +383,10 @@ BezierPath.prototype.getYPair = function(x) {
 	};
 };
 
+/**
+ * Update the spacing between each coordinate based on its height compared to
+ * the average height and spacing of all coordinates
+ */
 BezierPath.prototype.fixCoordSpacing = function() {
 	var lastIndex = this.coords.length -1;
 	var heightSum = this.coords.reduce(function(a, b) {
@@ -354,6 +407,9 @@ BezierPath.prototype.fixCoordSpacing = function() {
 	}
 };
 
+/**
+ * Compute the coordinates based on num_items
+ */
 BezierPath.prototype.computeCoord = function() {
 	this.storeCoords();
 
@@ -374,6 +430,9 @@ BezierPath.prototype.computeCoord = function() {
 	if(this.onCoordChange) this.onCoordChange(this.coords);
 };
 
+/**
+ * Draw vertical lines between the two curves at each spacing
+ */
 BezierPath.prototype.drawCross = function() {
 	var c, x, y, y2;
 	for(var i=0; i< this.coords.length; i++) {
