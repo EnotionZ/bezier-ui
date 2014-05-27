@@ -8,6 +8,12 @@ var height = 500;
 
 
 var pointList = [];
+
+/**
+ * Object representing {x, y} coordinate pairs
+ * @param {pt} array x = pt[0], y = pt[1]
+ * @param {type} string normal | control
+ */
 var Point = function(pt, type) {
 
 	// normal | control
@@ -32,11 +38,22 @@ var Point = function(pt, type) {
 	};
 };
 
+/**
+ * Change relative position
+ * @param {dx} number change in x
+ * @param {dy} number change in y
+ */
 Point.prototype.setOffset = function(dx, dy) {
 	this.state.x += dx;
 	this.state.y += dy;
 };
 
+/**
+ * Set position of point
+ * @param {x} number
+ * @param {y} number
+ * @param {silent} boolean fire onPositionChange method
+ */
 Point.prototype.setPosition = function(x, y, silent) {
 	var dx = x - this.state.x;
 	var dy = y - this.state.y;
@@ -46,16 +63,28 @@ Point.prototype.setPosition = function(x, y, silent) {
 	if(!silent && this.onPositionChange) this.onPositionChange(dx, dy);
 };
 
+/**
+ * Change state of point
+ * @param {state} string base | hover | active
+ */
 Point.prototype.setState = function(state) {
 	this.state.state = state;
 	return this;
 };
 
+/**
+ * Checks if point collides with given coordinate
+ * @param {x} number
+ * @param {y} number
+ */
 Point.prototype.isCollide = function(x, y) {
 	var distance = Math.sqrt(Math.pow(x-this.state.x, 2) + Math.pow(y-this.state.y,2));
 	return distance <= this.state.radius;
 };
 
+/**
+ * Draw point on canvas
+ */
 Point.prototype.draw = function() {
 	ctx.beginPath();
 	ctx.arc(this.state.x, this.state.y, this.state.radius, 0, Math.PI*2, true);
@@ -63,11 +92,20 @@ Point.prototype.draw = function() {
 	ctx.fill();
 };
 
+/**
+ * Gets JSON representation of point
+ * @return {array} [x, y]
+ */
 Point.prototype.toJSON = function() {
 	return [this.state.x-padding, this.state.y-padding];
 };
 
-/* Line Segment */
+
+
+/**
+ * Line Segment - linked list of cubic bezier point (2 control points)
+ * @param {opts} object representation of bezier point
+ */
 var LineSegment = function(opts) {
 
 	this.pt = new Point(opts.pt);
@@ -98,21 +136,41 @@ var LineSegment = function(opts) {
 	this.prev = null;
 };
 
+/**
+ * Get first item in linked list
+ * @return {LineSegment}
+ */
 LineSegment.prototype.first = function() {
 	var segment = this;
 	while (segment.prev) segment = segment.prev;
 	return segment;
 };
 
+/**
+ * Get last item in linked list
+ * @return {LineSegment}
+ */
 LineSegment.prototype.last = function() {
 	var segment = this;
 	while (segment.next) segment = segment.next;
 	return segment;
 };
 
+/**
+ * Determine if current LineSegment is first item in linked list
+ * @return {boolen}
+ */
 LineSegment.prototype.isFirst = function() { return !this.prev; };
+
+/**
+ * Determine if current LineSegment is last item in linked list
+ * @return {boolen}
+ */
 LineSegment.prototype.isLast = function() { return !this.next; };
 
+/**
+ * Draw bezier curve onto the canvas
+ */
 LineSegment.prototype.draw = function() {
 	if(this.isFirst()) {
 		ctx.moveTo(this.pt.state.x, this.pt.state.y);
@@ -124,6 +182,9 @@ LineSegment.prototype.draw = function() {
 	if(this.next) this.next.draw();
 };
 
+/**
+ * Draw control points and main coordinate onto the canvas
+ */
 LineSegment.prototype.drawCtrl = function() {
 
 	this.pt.draw();
@@ -144,6 +205,9 @@ LineSegment.prototype.drawCtrl = function() {
 	if(this.next) this.next.drawCtrl();
 };
 
+/**
+ * Get JSON representation of bezier curve
+ */
 LineSegment.prototype.toJSON = function() {
 	var out = { pt: this.pt.toJSON() };
 	if(!this.isFirst()) {
@@ -153,6 +217,12 @@ LineSegment.prototype.toJSON = function() {
 	return out;
 };
 
+/**
+ * Compute the coordinate along the current bezier curve
+ * @param {t} number along bezier curve between 0 and 1
+ * @param {key} string x | y
+ * @return {number} representing x | y of a given t
+ */
 LineSegment.prototype.cubicCompute = function(t, key) {
 	var p0 = this.prev.pt.state[key];
 	var p1 = this.cp1.state[key];
@@ -161,6 +231,10 @@ LineSegment.prototype.cubicCompute = function(t, key) {
 	return Math.pow(1-t, 3)*p0 + 3*Math.pow(1-t, 2)*t*p1 + 3*(1-t)*Math.pow(t,2)*p2 + Math.pow(t,3)*p3;
 };
 
+/**
+ * Compute {x, y} coordinate pairs along the bezier curve
+ * @param {arr} array to hold coordinate objects
+ */
 LineSegment.prototype.computeCoord = function(arr) {
 	var steps = 1000;
 	var inc = 1/steps;
@@ -179,7 +253,11 @@ LineSegment.prototype.computeCoord = function(arr) {
 };
 
 
-/* Bezier */
+
+/**
+ * BezierPath - holds information about the two bezier Line Segments
+ * @param {opts} object options
+ */
 var BezierPath = function(opts) {
 
 	if(typeof opts === 'string') opts = JSON.parse(opts);
