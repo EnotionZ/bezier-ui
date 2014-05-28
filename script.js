@@ -534,37 +534,3 @@ BezierPath.prototype.drawCross = function() {
 		ctx.stroke();
 	}
 };
-
-
-
-
-var defaultSettings = {
-	curve1: [
-		{ pt: [0, 0] },
-		{
-			cp1: [100,0],
-			cp2: [100,250],
-			pt: [300,250]
-		},
-		{
-			cp1: [500,250],
-			cp2: [500,500],
-			pt: [600,450]
-		}
-	],
-	curve2: [
-		{ pt: [0, 500] },
-		{
-			cp1: [100,500],
-			cp2: [100,350],
-			pt: [300,350]
-		},
-		{
-			cp1: [500,350],
-			cp2: [500,500],
-			pt: [600,500]
-		}
-	]
-};
-
-var b = new BezierPath(defaultSettings);
