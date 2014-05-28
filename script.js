@@ -509,6 +509,14 @@ BezierPath.prototype.computeCoord = function() {
 };
 
 /**
+ * Retrieve coordinates information
+ * @return {string} representation of coordinates array
+ */
+BezierPath.prototype.getCoords = function() {
+	return JSON.stringify(this.coords);
+};
+
+/**
  * Draw vertical lines between the two curves at each spacing
  */
 BezierPath.prototype.drawCross = function() {
